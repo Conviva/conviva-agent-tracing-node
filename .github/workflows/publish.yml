@@ -2,7 +2,8 @@
 # packages/ already holds each package exactly as it is published.
 #
 # Setup, once: add an npm automation token with publish rights on the
-# @convivainc scope as the NPM_TOKEN repository secret.
+# @convivainc scope as the NPM_TOKEN repository secret. Without it the
+# workflow skips publishing, for releases published by hand with `npm publish`.
 #
 # Versions already on npm are skipped, so re-running is safe.
 name: Publish
@@ -28,6 +29,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN is not set; skipping. Publish by hand with npm publish."
+            exit 0
+          fi
           for pkg in conviva-otlp-exporter conviva-agent-traces-connector conviva-agent-tracing; do
             name=$(node -p "require('./packages/$pkg/package.json').name")
             version=$(node -p "require('./packages/$pkg/package.json').version")
