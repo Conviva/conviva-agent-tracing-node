@@ -1,0 +1,39 @@
+# Publishes the staged npm packages in this repository. Nothing is built here:
+# packages/ already holds each package exactly as it is published.
+#
+# Setup, once: add an npm automation token with publish rights on the
+# @convivainc scope as the NPM_TOKEN repository secret.
+#
+# Versions already on npm are skipped, so re-running is safe.
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Publish in dependency order
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in conviva-otlp-exporter conviva-agent-traces-connector conviva-agent-tracing; do
+            name=$(node -p "require('./packages/$pkg/package.json').name")
+            version=$(node -p "require('./packages/$pkg/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published"
+              continue
+            fi
+            npm publish "./packages/$pkg" --access public
+          done

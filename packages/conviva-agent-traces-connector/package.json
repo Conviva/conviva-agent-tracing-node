@@ -1,0 +1,38 @@
+{
+  "name": "@convivainc/agent-traces-connector",
+  "version": "1.0.0",
+  "description": "OpenTelemetry helper that copies allowlisted W3C baggage entries (e.g. c3.*) onto every span and ensures the baggage propagator is registered.",
+  "license": "Apache-2.0",
+  "author": "Conviva Inc.",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "opentelemetry",
+    "otel",
+    "baggage",
+    "tracing",
+    "conviva",
+    "observability"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "INTEGRATION.md",
+    "AGENTS.md",
+    "INTEGRATION_GUIDE.md"
+  ],
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "dependencies": {
+    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0"
+  }
+}

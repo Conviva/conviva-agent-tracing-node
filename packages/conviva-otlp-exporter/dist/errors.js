@@ -1,0 +1,1 @@
+"use strict";var i=Object.defineProperty;var e=(o,r)=>i(o,"name",{value:r,configurable:!0});Object.defineProperty(exports,"__esModule",{value:!0}),exports.ConvivaTracingError=void 0;class n extends Error{static{e(this,"ConvivaTracingError")}constructor(r){super(r),this.name="ConvivaTracingError"}}exports.ConvivaTracingError=n;

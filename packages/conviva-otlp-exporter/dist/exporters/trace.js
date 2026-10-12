@@ -1,0 +1,1 @@
+"use strict";var a=Object.defineProperty;var r=(e,t)=>a(e,"name",{value:t,configurable:!0});Object.defineProperty(exports,"__esModule",{value:!0}),exports.createTraceExporter=o;const c=require("@opentelemetry/exporter-trace-otlp-proto");function o(e){return new c.OTLPTraceExporter({url:e.tracesUrl,headers:{...e.headers}})}r(o,"createTraceExporter");

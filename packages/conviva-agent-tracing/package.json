@@ -1,0 +1,43 @@
+{
+  "name": "@convivainc/agent-tracing",
+  "version": "1.0.0",
+  "description": "Conviva tracing SDK for AI agents — a thin wrapper over OpenLLMetry that exports OTLP http/protobuf traces to the Conviva agent gateway, with Conviva's span processors and baggage connector built in.",
+  "license": "Apache-2.0",
+  "author": "Conviva Inc.",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "opentelemetry",
+    "otel",
+    "openllmetry",
+    "traceloop",
+    "llm",
+    "agent",
+    "tracing",
+    "conviva",
+    "observability"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "INTEGRATION.md",
+    "AGENTS.md",
+    "INTEGRATION_GUIDE.md"
+  ],
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "dependencies": {
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
+    "@traceloop/node-server-sdk": "^0.27.0",
+    "@convivainc/agent-traces-connector": "^1.0.0",
+    "@convivainc/otlp-exporter": "^1.0.0"
+  }
+}
