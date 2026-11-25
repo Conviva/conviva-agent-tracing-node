@@ -61,6 +61,15 @@ For an API that accepts only one processor — OpenLLMetry's
 const processor = new CompositeSpanProcessor(...createConvivaSpanProcessors(config));
 ```
 
+## Masking PII
+
+Off by default. To mask content before it leaves the process, pass your own
+function: `createTraceExporter(config, { mask })`, or wrap any exporter with
+`new MaskingSpanExporter(exporter, mask)`. Content under other attribute
+names (e.g. `input.value`) can be masked on top of the built-in keys with
+`maskAttributes`. See
+[INTEGRATION.md](INTEGRATION.md#masking-pii).
+
 ## What the processors do
 
 | Processor | Writes | Notes |

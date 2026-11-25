@@ -128,6 +128,51 @@ reads `cvx.conversation_id` must come **after**.
 
 ---
 
+### Masking PII
+
+The package does not detect PII. To mask prompts, completions and tool payloads
+before they leave the process, pass your own `mask` function. Off by default.
+
+```ts
+const mask: MaskFunction = ({ key, value, span, event }) =>
+  typeof value === "string" ? value.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>") : value;
+
+// The Conviva exporter, masked:
+new BatchSpanProcessor(createTraceExporter(config, { mask }));
+
+// Or any exporter you already have:
+new BatchSpanProcessor(new MaskingSpanExporter(myExporter, mask));
+```
+
+The hook is called on every finished span and its events, just before export,
+for each built-in content attribute (listed in `sdks/contract/mask-contract.json`)
+plus any `maskAttributes` entries. It is also called for the span's status
+description, under the key `otel.status_description`, because SDKs copy the
+exception message there. Return the value to send, or `undefined` to drop it.
+Conversation ids and the client sensor's `c3.client_id` / `c3.conv_id` are
+never passed to it. It must be
+synchronous: an `async` function throws `ConvivaTracingError` when the exporter
+is built. If it throws or returns something that is not an attribute value, the
+attribute is dropped, the span still exports, and a warning naming only the
+attribute and the error type is logged at most once a minute. Spans are not
+changed in place: a masked copy is exported. Masking happens only in the
+wrapped exporter, so other exporters on the same provider still see the
+unmasked spans.
+
+#### Content under other attribute names
+
+The hook only sees the built-in content keys. If your instrumentation records
+content under other names, list them in `maskAttributes`; an entry ending in
+`*` is a prefix. They are masked on top of the built-in keys, which are always
+masked; conversation ids and `c3.client_id` / `c3.conv_id` are still never
+passed to the hook. `maskAttributes` without `mask` throws
+`ConvivaTracingError`.
+
+```ts
+createTraceExporter(config, { mask, maskAttributes: ["input.value", "output.value", "app.payload.*"] });
+new MaskingSpanExporter(myExporter, mask, { attributes: ["input.value"] });
+```
+
 ## 6. Conversation ids
 
 `ConversationIdSpanProcessor` writes `cvx.conversation_id`, taking the first of:
@@ -188,7 +233,8 @@ diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 ```ts
 import {
   resolveConfig, parseKeyPairs, ConvivaTracingError,
-  createTraceExporter,
+  createTraceExporter, MaskingSpanExporter, isMaskableAttribute,
+  type MaskFunction, type MaskInput, type TraceExporterOptions,
   createConvivaSpanProcessors, CompositeSpanProcessor,
   ConversationIdSpanProcessor, ProjectIdSpanProcessor, AttributeSpanProcessor,
   CONVERSATION_ID_ATTRIBUTE, PROJECT_ID_ATTRIBUTE, PROJECT_ID_HEADER,
@@ -202,6 +248,8 @@ import {
 | | |
 |---|---|
 | `resolveConfig(options?, env?)` | Endpoint, traces URL, headers and project id. Throws on bad input. |
-| `createTraceExporter(config)` | The OTLP http/protobuf trace exporter. |
+| `createTraceExporter(config, { mask }?)` | The OTLP http/protobuf trace exporter; wrapped in a `MaskingSpanExporter` when `mask` is given. |
+| `MaskingSpanExporter(exporter, mask)` | Wraps any exporter so content attributes pass through `mask` before export ([Masking PII](#masking-pii)). |
+| `isMaskableAttribute(key, extraAttributes?)` | Whether `mask` is called for an attribute. |
 | `createConvivaSpanProcessors(config, options?)` | `[ConversationId, ProjectId, Attribute?]`, in the order they must run. |
 | `CompositeSpanProcessor(...processors)` | Runs several processors as one, in argument order. |

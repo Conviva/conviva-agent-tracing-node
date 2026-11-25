@@ -114,6 +114,58 @@ Recorded on spans by default. Set `CONVIVA_TRACE_CONTENT=false` (or pass
 `traceContent: false`) to keep message content off spans; OpenLLMetry's own
 `TRACELOOP_TRACE_CONTENT` is honoured when the Conviva variable is unset.
 
+### Masking PII
+
+The SDK does not detect or mask PII itself; Conviva masks centrally, after
+ingest. To mask before data leaves your process, pass a `mask` function and
+call the engine of your choice (regex, Presidio, your DLP). Off by default.
+
+```ts
+init({
+  // Called for each content attribute just before export. Return the new
+  // value, or undefined to drop the attribute.
+  mask: ({ value }) =>
+    typeof value === "string" ? value.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>") : value,
+});
+```
+
+The hook sees content attributes only, on the span and on its events
+(`gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.prompt.*`,
+`gen_ai.completion.*`, `traceloop.entity.input/output`,
+`traceloop.prompt.template_variables.*`, `traceloop.association.properties.*`,
+`exception.message`/`exception.stacktrace`, ...; the full list is in
+`sdks/contract/mask-contract.json`). `event` names the span event an attribute
+came from, and is `undefined` for span attributes. The hook is also called for
+the span's status description (key `otel.status_description`), which often
+repeats the exception message. Conversation ids and the client sensor's
+`c3.client_id` / `c3.conv_id` are never passed to it.
+
+- **Synchronous and fast.** An `async` function is rejected by `init`. The hook
+  runs on the event loop during export, so a slow one (a network call to a
+  redaction service) delays your application.
+- **Fails closed.** If it throws or returns something that is not an attribute
+  value (a string, number, boolean or an array of one of those), that
+  attribute is dropped and the span still exports. A warning naming the
+  attribute and the error type is logged at most once a minute; the error
+  message is never logged.
+- **Read-only.** `span` is a frozen view; do not modify it. Spans are not
+  changed in place: a masked copy is exported, and other exporters see the
+  original.
+
+#### Content under other attribute names
+
+The hook only sees the keys above. If other instrumentation on the same
+provider records content under different names (OpenInference's
+`input.value` / `output.value`, your own `app.payload.*`), list them in
+`maskAttributes`; an entry ending in `*` is a prefix. They are masked on top of
+the built-in keys, which are always masked; conversation ids and
+`c3.client_id` / `c3.conv_id` are still never passed to the hook. `maskAttributes`
+without `mask` is rejected by `init`.
+
+```ts
+init({ mask, maskAttributes: ["input.value", "output.value", "app.payload.*"] });
+```
+
 ## Two things to know
 
 **`shutdown()` only flushes.** OpenLLMetry keeps its `NodeSDK` private and

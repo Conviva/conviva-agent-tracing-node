@@ -1,6 +1,6 @@
 import { type ConnectorConfig } from "@convivainc/agent-traces-connector";
 import type { SpanProcessor } from "@opentelemetry/sdk-trace-base";
-import { type ConversationIdOptions, type ConvivaConfigOptions, type ResolvedConfig } from "@convivainc/otlp-exporter";
+import { type ConversationIdOptions, type ConvivaConfigOptions, type MaskFunction, type ResolvedConfig } from "@convivainc/otlp-exporter";
 import { type InitializeOptions } from "@traceloop/node-server-sdk";
 /**
  * Conviva-owned options plus OpenLLMetry's own initialization surface.
@@ -27,6 +27,44 @@ export interface ConvivaTracingOptions extends Omit<InitializeOptions, "baseUrl"
      * (client, conversation and message ids).
      */
     baggage?: ConnectorConfig;
+    /**
+     * Optional hook for masking PII in prompts, completions and tool payloads.
+     *
+     * Called for each content attribute (`gen_ai.input.messages`,
+     * `gen_ai.prompt.*`, `traceloop.entity.input`, `exception.message`, ...) on
+     * every finished span and its events, just before export. Return the value
+     * to send, or `undefined` to drop the attribute. If it throws or returns
+     * something that is not an attribute value, the attribute is dropped and the
+     * span still exports. Conversation ids are never passed to it.
+     *
+     * Must be synchronous (an async function is rejected) and fast: it runs on
+     * the event loop, on the export path. `span` is a read-only view.
+     *
+     * Off by default: the SDK does not detect PII itself. Bring your own
+     * engine — regex, Presidio, your DLP.
+     *
+     * @example
+     * ```ts
+     * init({
+     *   mask: ({ value }) =>
+     *     typeof value === "string" ? value.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "<email>") : value,
+     * });
+     * ```
+     */
+    mask?: MaskFunction;
+    /**
+     * Extra attribute names to pass to `mask`, for instrumentation that records
+     * content outside the built-in keys (e.g. OpenInference's `input.value`).
+     * An entry ending in `*` is a prefix (`"langfuse.observation.*"`); any other
+     * entry is an exact name. Adds to the built-in keys; conversation ids are
+     * never passed to the hook. Requires `mask`.
+     *
+     * @example
+     * ```ts
+     * init({ mask: myMask, maskAttributes: ["input.value", "output.value", "app.payload.*"] });
+     * ```
+     */
+    maskAttributes?: readonly string[];
 }
 /** Set to `0`, `false` or `no` to keep prompts and completions off spans. */
 export declare const TRACE_CONTENT_ENV = "CONVIVA_TRACE_CONTENT";
@@ -78,7 +116,7 @@ export declare function shutdown(): Promise<void>;
 /** Test seam: forget the cached config so a fresh `init()` can run. */
 export declare function resetForTesting(): void;
 /** The Conviva transport layer, re-exported so applications depend on this package alone. */
-export { CONVERSATION_ID_ATTRIBUTE, CUSTOMER_KEY_ENV, ENDPOINT_ENV, GATEWAY_DOMAIN, PROJECT_ID_ATTRIBUTE, PROJECT_ID_ENV, PROJECT_ID_HEADER, TRACES_PATH, ASSOCIATION_PROPERTY_PREFIX, AttributeSpanProcessor, CompositeSpanProcessor, ConversationIdSpanProcessor, ConvivaTracingError, DEFAULT_BAGGAGE_KEYS, DEFAULT_SOURCE_ATTRIBUTES, GEN_AI_CONVERSATION_ID_ATTRIBUTE, ProjectIdSpanProcessor, createConvivaSpanProcessors, createTraceExporter, resolveConfig, type ConversationIdOptions, type ResolvedConfig, } from "@convivainc/otlp-exporter";
+export { CONVERSATION_ID_ATTRIBUTE, CUSTOMER_KEY_ENV, ENDPOINT_ENV, GATEWAY_DOMAIN, PROJECT_ID_ATTRIBUTE, PROJECT_ID_ENV, PROJECT_ID_HEADER, TRACES_PATH, ASSOCIATION_PROPERTY_PREFIX, AttributeSpanProcessor, CompositeSpanProcessor, ConversationIdSpanProcessor, ConvivaTracingError, DEFAULT_BAGGAGE_KEYS, DEFAULT_SOURCE_ATTRIBUTES, GEN_AI_CONVERSATION_ID_ATTRIBUTE, ProjectIdSpanProcessor, createConvivaSpanProcessors, createTraceExporter, isMaskableAttribute, MaskingSpanExporter, resolveConfig, type ConversationIdOptions, type MaskFunction, type MaskingOptions, type MaskInput, type ResolvedConfig, } from "@convivainc/otlp-exporter";
 /** The baggage connector, re-exported so applications depend on this package alone. */
 export { BaggageSpanProcessor, ensureBaggagePropagator, type ConnectorConfig, } from "@convivainc/agent-traces-connector";
 /**

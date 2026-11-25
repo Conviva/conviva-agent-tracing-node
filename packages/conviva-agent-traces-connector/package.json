@@ -1,6 +1,6 @@
 {
   "name": "@convivainc/agent-traces-connector",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "OpenTelemetry helper that copies allowlisted W3C baggage entries (e.g. c3.*) onto every span and ensures the baggage propagator is registered.",
   "license": "Apache-2.0",
   "author": "Conviva Inc.",
